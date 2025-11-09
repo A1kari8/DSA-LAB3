@@ -10,24 +10,26 @@
  * @brief 用于Kruskal算法的边列表图类
  * @author Alkaid
  */
-class GraphEL : public GraphBase<GraphEL> {
+class GraphELKruskal : public GraphBase<GraphELKruskal> {
 public:
-  GraphEL() = default;
+  GraphELKruskal() = default;
 
-  static std::optional<GraphEL> readFromTOML(const std::filesystem::path &filePath);
+  static std::optional<GraphELKruskal>
+  readFromTOML(const std::filesystem::path &filePath);
 
   [[nodiscard]] bool writeToTOML(const std::filesystem::path &filePath) const;
 
   [[nodiscard]] bool writeToDot(const std::filesystem::path &filePath) const;
 
-  [[nodiscard]] bool exportImage(const std::filesystem::path &imageFile, const std::string &format = "png") const;
+  [[nodiscard]] bool exportImage(const std::filesystem::path &imageFile,
+                                 const std::string &format = "png") const;
 
   [[nodiscard]] bool addEdge(const std::string &node1, const std::string &node2,
                              int weight) override;
 
   std::optional<std::vector<Edge>> getEdges() const override;
 
-  std::optional<GraphEL> getMinimumSpanningTree() const override;
+  std::optional<GraphELKruskal> getMinimumSpanningTree() const override;
 
 private:
   struct Edge {

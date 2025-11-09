@@ -1,11 +1,23 @@
 graph G {
+    J -- K [label="2"];
+    G -- J [label="1"];
+    G -- H [label="7"];
+    F -- J [label="2"];
+    F -- G [label="5"];
+    E -- J [label="5"];
     E -- F [label="8"];
+    H -- K [label="3"];
+    H -- I [label="6"];
+    B -- G [label="1"];
     B -- E [label="2"];
     B -- D [label="5"];
     B -- C [label="2"];
+    I -- K [label="4"];
     D -- F [label="4"];
     D -- E [label="6"];
+    D -- I [label="4"];
     C -- E [label="3"];
+    C -- H [label="2"];
     C -- D [label="3"];
     A -- F [label="7"];
     A -- D [label="2"];

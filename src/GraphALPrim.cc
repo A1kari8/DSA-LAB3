@@ -1,4 +1,4 @@
-#include "GraphAL.hh"
+#include "GraphALPrim.hh"
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -11,8 +11,8 @@
 
 namespace fs = std::filesystem;
 
-bool GraphAL::addEdge(const std::string &node1, const std::string &node2,
-                      int weight) {
+bool GraphALPrim::addEdge(const std::string &node1, const std::string &node2,
+                          int weight) {
   std::unordered_map<std::string, int> neighbors = adjList[node1];
   if (neighbors.find(node2) != neighbors.end()) {
     std::cerr << node1 << " 和 " << node2 << " 之间的边已存在" << std::endl;
@@ -23,11 +23,11 @@ bool GraphAL::addEdge(const std::string &node1, const std::string &node2,
   return true;
 }
 
-std::optional<GraphAL>
-GraphAL::readFromTOML(const std::filesystem::path &filePath) {
+std::optional<GraphALPrim>
+GraphALPrim::readFromTOML(const std::filesystem::path &filePath) {
   try {
     toml::table tbl = toml::parse_file(filePath.string());
-    GraphAL graph;
+    GraphALPrim graph;
     for (const auto &item : tbl) {
       const std::string &node1 = item.first.data();
       const toml::table &edges = *item.second.as_table();
@@ -53,7 +53,7 @@ GraphAL::readFromTOML(const std::filesystem::path &filePath) {
   }
 }
 
-bool GraphAL::writeToTOML(const fs::path &filePath) const {
+bool GraphALPrim::writeToTOML(const fs::path &filePath) const {
   toml::table tbl;
   for (const auto &pair : adjList) {
     const std::string &node1 = pair.first;
@@ -85,19 +85,20 @@ bool GraphAL::writeToTOML(const fs::path &filePath) const {
   }
 }
 
-std::optional<std::vector<GraphBase<GraphAL>::Edge>> GraphAL::getEdges() const {
-  std::vector<GraphBase<GraphAL>::Edge> edges;
+std::optional<std::vector<GraphBase<GraphALPrim>::Edge>>
+GraphALPrim::getEdges() const {
+  std::vector<GraphBase<GraphALPrim>::Edge> edges;
   for (const auto &[node1, neighbors] : adjList) {
     for (const auto &[node2, weight] : neighbors) {
       if (node1 < node2) { // 避免重复边
-        edges.push_back({node1, node2, weight, nullptr});
+        edges.push_back({node1, node2, weight});
       }
     }
   }
   return edges;
 }
 
-bool GraphAL::writeToDot(const fs::path &filePath) const {
+bool GraphALPrim::writeToDot(const fs::path &filePath) const {
   try {
     std::ofstream out(filePath);
     if (!out) {
@@ -126,7 +127,7 @@ bool GraphAL::writeToDot(const fs::path &filePath) const {
   }
 }
 
-bool GraphAL::checkConnected() const {
+bool GraphALPrim::checkConnected() const {
   if (adjList.empty())
     return true;
   std::unordered_set<std::string> visited;
@@ -143,17 +144,23 @@ bool GraphAL::checkConnected() const {
   return visited.size() == adjList.size();
 }
 
-std::optional<GraphAL> GraphAL::getMinimumSpanningTree() const {
-  if (adjList.empty())
-    return GraphAL();
-
-  std::unordered_map<std::string, int> minEdge;
-  for (const auto &p : adjList) {
-    minEdge[p.first] = std::numeric_limits<int>::max();
+std::optional<GraphALPrim> GraphALPrim::getMinimumSpanningTree() const {
+  if (adjList.empty()) {
+    return std::nullopt;
   }
+
+  // 存储每个节点的由算法选择的最新的最小边的权重
+  std::unordered_map<std::string, int> minWeight;
+  // 遍历每个键值对，初始化最小边权重为无穷大
+  for (const auto &kv : adjList) {
+    minWeight[kv.first] = std::numeric_limits<int>::max();
+  }
+  // 存储每个节点在最小生成树中的父节点
   std::unordered_map<std::string, std::string> parent;
+  // 存储已加入最小生成树的节点
   std::unordered_set<std::string> inMST;
 
+  // 优先队列的比较函数，按边权重从小到大排序
   auto cmp = [](const std::pair<std::string, int> &a,
                 const std::pair<std::string, int> &b) {
     return a.second > b.second;
@@ -162,30 +169,41 @@ std::optional<GraphAL> GraphAL::getMinimumSpanningTree() const {
                       std::vector<std::pair<std::string, int>>, decltype(cmp)>
       pq(cmp);
 
+  // 初始化起始节点，设置其最小边权重为0
   auto it = adjList.begin();
   std::string start = it->first;
-  minEdge[start] = 0;
+  minWeight[start] = 0;
   pq.push({start, 0});
 
   while (!pq.empty()) {
-    auto [u, cost] = pq.top();
+    // 弹出当前边权重最小的节点
+    auto [nodeU, cost] = pq.top();
     pq.pop();
-    if (inMST.count(u)) {
+
+    // 如果节点已在最小生成树中，跳过
+    if (inMST.count(nodeU)) {
       continue;
     }
-    inMST.insert(u);
-    for (const auto &[v, w] : adjList.at(u)) {
-      if (!inMST.count(v) && w < minEdge[v]) {
-        minEdge[v] = w;
-        parent[v] = u;
-        pq.push({v, w});
+    // 否则将节点加入最小生成树
+    inMST.insert(nodeU);
+    // 此时u已经是最小生成树的一部分，遍历它的邻节点
+    // 遍历与u节点相连的节点，更新minEdge中它们与u的最小的权重
+    for (const auto &[nodeV, weightV] : adjList.at(nodeU)) {
+      // 确保v节点不在最小生成树中，且边权重小于当前记录的最小边权重
+      if (!inMST.count(nodeV) && weightV < minWeight[nodeV]) {
+        // 更新v节点到u的最小边权重
+        minWeight[nodeV] = weightV;
+        // 将u节点设置为v的父节点
+        parent[nodeV] = nodeU;
+        // 将与u节点相连的节点及其边权重加入优先队列
+        pq.push({nodeV, weightV});
       }
     }
   }
 
-  GraphAL mst;
-  for (const auto &[v, p] : parent) {
-    if (!mst.addEdge(p, v, minEdge[v])) {
+  GraphALPrim mst;
+  for (const auto &[nodeU, nodeV] : parent) {
+    if (!mst.addEdge(nodeV, nodeU, minWeight[nodeU])) {
       std::cerr << "添加边失败" << std::endl;
       return std::nullopt;
     }
@@ -193,8 +211,8 @@ std::optional<GraphAL> GraphAL::getMinimumSpanningTree() const {
   return mst;
 }
 
-bool GraphAL::exportImage(const std::filesystem::path &imageFile,
-                          const std::string &format) const {
+bool GraphALPrim::exportImage(const std::filesystem::path &imageFile,
+                              const std::string &format) const {
   std::filesystem::path dotFile = imageFile;
   dotFile.replace_extension(".dot");
   if (!writeToDot(dotFile)) {

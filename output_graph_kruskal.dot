@@ -1,7 +1,12 @@
 graph G {
     A -- B [label="1"];
+    G -- J [label="1"];
+    B -- G [label="1"];
+    J -- K [label="2"];
+    F -- J [label="2"];
+    C -- H [label="2"];
+    B -- E [label="2"];
     B -- C [label="2"];
     A -- D [label="2"];
-    B -- E [label="2"];
-    D -- F [label="4"];
+    I -- K [label="4"];
 }

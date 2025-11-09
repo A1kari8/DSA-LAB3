@@ -1,13 +1,13 @@
 #ifndef GRAPHAL
 #define GRAPHAL
 
+#include "GraphBase.hh"
 #include <filesystem>
 #include <iostream>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <vector>
-#include "GraphBase.hh"
 
 namespace fs = std::filesystem;
 
@@ -15,11 +15,11 @@ namespace fs = std::filesystem;
  * @brief 用于Prim算法的邻接表图类
  * @author Alkaid
  */
-class GraphAL : public GraphBase<GraphAL> {
+class GraphALPrim : public GraphBase<GraphALPrim> {
 public:
-  GraphAL() = default;
+  GraphALPrim() = default;
 
-  static std::optional<GraphAL> readFromTOML(const fs::path &filePath);
+  static std::optional<GraphALPrim> readFromTOML(const fs::path &filePath);
 
   [[nodiscard]] bool writeToTOML(const fs::path &filePath) const;
 
@@ -27,13 +27,15 @@ public:
 
   [[nodiscard]] bool addEdge(const std::string &node1, const std::string &node2,
                              int weight) override;
+
   [[nodiscard]] std::optional<std::vector<Edge>> getEdges() const override;
 
-  std::optional<GraphAL> getMinimumSpanningTree() const override;
+  std::optional<GraphALPrim> getMinimumSpanningTree() const override;
 
-  [[nodiscard]] bool exportImage(const fs::path &imageFile, const std::string &format = "png") const;
+  [[nodiscard]] bool exportImage(const fs::path &imageFile,
+                                 const std::string &format = "png") const;
 
-  friend std::ostream &operator<<(std::ostream &os, const GraphAL &graph) {
+  friend std::ostream &operator<<(std::ostream &os, const GraphALPrim &graph) {
     for (const auto &pair : graph.adjList) {
       const std::string &node = pair.first;
       const auto &neighbors = pair.second;
